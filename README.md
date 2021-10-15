@@ -125,18 +125,18 @@ spec:
       license: 
         accept: true
       pakModules:
-        - name: aiManager
-          enabled: true
-        - name: aiopsFoundation
-          enabled: true
-        - name: applicationManager
-          enabled: true
-          config: 
-          - name: noi-operator
-            spec: 
-              noi:
-                persistence:
-                  storageClassDB2: rook-cephfs
+      - name: aiManager
+        enabled: true
+      - name: aiopsFoundation
+        enabled: true
+      - name: applicationManager
+        enabled: true
+        config: 
+        - name: noi-operator
+          spec: 
+            noi:
+              persistence:
+                storageClassDB2: rook-cephfs
       size: small
       storageClass: rook-cephfs
       storageClassLargeBlock: rook-cephfs
