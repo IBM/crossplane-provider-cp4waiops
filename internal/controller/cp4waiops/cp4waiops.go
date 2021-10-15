@@ -134,7 +134,7 @@ var (
 		"quay.io/opencloudio": {"hyc-cloud-private-daily-docker-local.artifactory.swg-devops.com/ibmcom"},
 		"cp.icr.io/cp/cpd":    {"hyc-cloud-private-daily-docker-local.artifactory.swg-devops.com/ibmcom"},
 	}
-	dependency = ""
+	component = ""
 
 	internalArtifactories = [...]string{
 		"hyc-katamari-cicd-team-docker-local.artifactory.swg-devops.com",
@@ -415,34 +415,34 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 
 	e.logger.Info("Creating: " + cr.ObjectMeta.Name)
-	e.logger.Info("current stage : " + dependency)
+	e.logger.Info("current stage : " + component)
 	//Only handle unavailable resources/services/deployment
 	switch {
-	case dependency == DOCS:
+	case component == DOCS:
 		e.createOCS(ctx)
-	case dependency == DNamespace:
+	case component == DNamespace:
 		e.createNamespace(ctx)
-	case dependency == DGlobalImagePullSecret:
+	case component == DGlobalImagePullSecret:
 		e.patchGlobalImagePullSecret(ctx)
-	case dependency == DImageContentPolicy:
+	case component == DImageContentPolicy:
 		e.createImageContentPolicy(ctx)
-	case dependency == DImagePullSecret:
+	case component == DImagePullSecret:
 		e.createImagePullSecret(ctx)
-	case dependency == DStrimzOperator:
+	case component == DStrimzOperator:
 		e.createStrimzOperator(ctx)
-	case dependency == DServerlessOperator:
+	case component == DServerlessOperator:
 		e.createServerlessOperator(ctx)
-	case dependency == DServerlessNamespace:
+	case component == DServerlessNamespace:
 		e.createServerlessNamespace(ctx)
-	case dependency == DKnativeServingInstance:
+	case component == DKnativeServingInstance:
 		e.createKnativeServingInstance(ctx)
-	case dependency == DKnativeEveningInstance:
+	case component == DKnativeEveningInstance:
 		e.createKnativeEventingInstance(ctx)
-	case dependency == CatalogSource:
+	case component == CatalogSource:
 		e.createCatalogSources(ctx, cr)
-	case dependency == AIOpsSubscription:
+	case component == AIOpsSubscription:
 		e.createAIOpsSubscription(ctx, cr)
-	case dependency == DWAIOPS:
+	case component == DWAIOPS:
 		e.createCP4WAIOPS(ctx, cr)
 	}
 
@@ -482,7 +482,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
 func int32Ptr(i int32) *int32 { return &i }
 
 func (e *external) observeNamespace(ctx context.Context, cr *v1alpha1.Cp4waiops) error {
-	dependency = DNamespace
+	component = DNamespace
 	aiopsNamespace = cr.Spec.ForProvider.InstallParams.Namespace
 	e.logger.Info("Observe Namespace existing for aiops " + aiopsNamespace)
 
@@ -490,7 +490,7 @@ func (e *external) observeNamespace(ctx context.Context, cr *v1alpha1.Cp4waiops)
 	if err != nil {
 		return err
 	}
-	//dependency = DImageContentPolicy
+	//component = DImageContentPolicy
 
 	return nil
 }
@@ -525,7 +525,7 @@ func (e *external) observeImageContentPolicy(ctx context.Context) error {
 		e.logger.Info("Get ImageContentPolicy error")
 		return err
 	}
-	dependency = DImagePullSecret
+	component = DImagePullSecret
 	return nil
 }
 
@@ -567,7 +567,7 @@ func (e *external) createImageContentPolicy(ctx context.Context) error {
 }
 
 func (e *external) observeGlobalImagePullSecret(ctx context.Context) error {
-	dependency = DGlobalImagePullSecret
+	component = DGlobalImagePullSecret
 	e.logger.Info("Observe Global image secret existing for aiops ")
 
 	secretobj, err := e.kube.CoreV1().Secrets(GBSNamespace).Get(ctx, "pull-secret", metav1.GetOptions{})
@@ -679,7 +679,7 @@ func (e *external) patchGlobalImagePullSecret(ctx context.Context) error {
 }
 
 func (e *external) observeImagePullSecret(ctx context.Context, cr *v1alpha1.Cp4waiops) error {
-	dependency = DImagePullSecret
+	component = DImagePullSecret
 	DImagePullSecretName = cr.Spec.ForProvider.InstallParams.ImagePullSecret
 	e.logger.Info("Observe ImagePullSecret existing for aiops ")
 
@@ -915,7 +915,7 @@ func (e *external) patchServiceaccount(ctx context.Context, namespace string, se
 }
 
 func (e *external) observeStrimzOperator(ctx context.Context) error {
-	dependency = DStrimzOperator
+	component = DStrimzOperator
 	e.logger.Info("Observe StrimzOperator existing for aiops ")
 
 	opaiops, err := e.opClient.OperatorsV1alpha1().
@@ -927,7 +927,7 @@ func (e *external) observeStrimzOperator(ctx context.Context) error {
 	if !(opaiops.Status.State == "AtLatestKnown") {
 		//Return reconcile waiting for StrimzOperator ready
 		e.logger.Info("Waiting for strimzi-kafka-operator operator AtLatestKnown")
-		dependency = DStrimzOperator
+		component = DStrimzOperator
 		return nil
 	}
 
@@ -961,7 +961,7 @@ func (e *external) createStrimzOperator(ctx context.Context) error {
 }
 
 func (e *external) observeServerlessOperator(ctx context.Context) error {
-	dependency = DServerlessOperator
+	component = DServerlessOperator
 	e.logger.Info("Observe ServerlessOperator existing for aiops ")
 
 	opaiops, err := e.opClient.OperatorsV1alpha1().
@@ -981,7 +981,7 @@ func (e *external) observeServerlessOperator(ctx context.Context) error {
 					return err
 				}
 		*/
-		dependency = DServerlessOperator
+		component = DServerlessOperator
 		return nil
 	}
 
@@ -1016,7 +1016,7 @@ func (e *external) createServerlessOperator(ctx context.Context) error {
 }
 
 func (e *external) observeServerlessNamespace(ctx context.Context) error {
-	dependency = DServerlessNamespace
+	component = DServerlessNamespace
 	e.logger.Info("Observe ServerlessNamespace existing for aiops " + KNATIVE_SERVING_NAMESPACE)
 
 	_, err := e.kube.CoreV1().Namespaces().Get(context.TODO(), KNATIVE_SERVING_NAMESPACE, metav1.GetOptions{})
@@ -1063,7 +1063,7 @@ func (e *external) createServerlessNamespace(ctx context.Context) error {
 }
 
 func (e *external) observeKnativeServingInstance(ctx context.Context) error {
-	dependency = DKnativeServingInstance
+	component = DKnativeServingInstance
 	e.logger.Info("Observe KnativeServingInstance existing for aiops ")
 
 	knativeClient, err := knativeclient.NewForConfig(e.config)
@@ -1128,7 +1128,7 @@ func (e *external) createKnativeServingInstance(ctx context.Context) error {
 }
 
 func (e *external) observeKnativeEventingInstance(ctx context.Context) error {
-	dependency = DKnativeEveningInstance
+	component = DKnativeEveningInstance
 	e.logger.Info("Observe KnativeEventingInstance existing for aiops ")
 
 	knativeClient, err := knativeclient.NewForConfig(e.config)
@@ -1176,7 +1176,7 @@ func (e *external) createKnativeEventingInstance(ctx context.Context) error {
 }
 
 func (e *external) observeCatalogSources(ctx context.Context) error {
-	dependency = CatalogSource
+	component = CatalogSource
 	e.logger.Info("Observe all CatalogSource existing for aiops ")
 
 	//Check CatalogSources opencloud-operators
@@ -1304,7 +1304,7 @@ func (e *external) createCatalogSources(ctx context.Context, cr *v1alpha1.Cp4wai
 }
 
 func (e *external) observeAIOpsSubscription(ctx context.Context) error {
-	dependency = AIOpsSubscription
+	component = AIOpsSubscription
 	e.logger.Info("Observe AIOPS Subscription existing for aiops ")
 
 	//Check CatalogSources opencloud-operators
@@ -1361,7 +1361,7 @@ func (e *external) addSecret(auths *Auths, artifact string, auth []byte, email s
 }
 
 func (e *external) observeOCS(ctx context.Context) error {
-	dependency = DOCS
+	component = DOCS
 	e.logger.Info("Observe openshift storage existing for aiops ")
 	observed, err := e.getOCSYaml()
 	if err != nil {
@@ -1772,7 +1772,7 @@ func getDesired(s string) (*unstructured.Unstructured, error) {
 }
 
 func (e *external) observeCP4WAIOPS(ctx context.Context, cr *v1alpha1.Cp4waiops) error {
-	dependency = DWAIOPS
+	component = DWAIOPS
 	e.logger.Info("Observe CP4WAIOPS installation")
 	installationsrc := `{
 		"apiVersion": "orchestrator.aiops.ibm.com/v1alpha1",
@@ -1884,7 +1884,7 @@ func (e *external) createCP4WAIOPS(ctx context.Context, cr *v1alpha1.Cp4waiops) 
 }
 
 func (e *external) validateCP4WAIOPS(ctx context.Context) error {
-	dependency = Validate
+	component = Validate
 	e.logger.Info("Velidate CP4WAIOPS installation")
 
 	e.logger.Info("Checking if pods pullimage error")
@@ -1917,4 +1917,3 @@ func (e *external) fixPodImagePullError(ctx context.Context, namespace string) e
 	}
 	return nil
 }
-
