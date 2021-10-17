@@ -5,7 +5,7 @@
 - [Crossplane Provider for Cloud Pak for Watson AIOps](#crossplane-provider-for-cloud-pak-for-watson-aiops)
   - [Prerequisites](#prerequisites)
   - [Tutorial](#tutorial)
-    - [Clone The Repoa](#clone-the-repoa)
+    - [Clone The Repo](#clone-the-repo)
     - [Create Secret with the Kubernetes Kubeconfig](#create-secret-with-the-kubernetes-kubeconfig)
     - [Create Secret with IBM entitlement key](#create-secret-with-ibm-entitlement-key)
     - [Deploy Cloudpak Provider](#deploy-cloudpak-provider)
@@ -27,10 +27,10 @@
 
 ## Tutorial
 
-### Clone The Repoa
+### Clone The Repo
 
 ```shell
-git clone https://github.com/IBM/crossplane-provider-cp4waiops.git
+git clone https://github.com/cloud-pak-gitops/crossplane-provider-cp4waiops.git
 cd crossplane-provider-cp4waiops
 ```
 
