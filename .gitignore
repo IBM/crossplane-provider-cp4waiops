@@ -1,0 +1,5 @@
+# temporay files
+*.swp
+
+# binaries
+bin/
