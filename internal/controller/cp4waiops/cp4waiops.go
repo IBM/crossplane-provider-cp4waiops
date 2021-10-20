@@ -59,15 +59,13 @@ import (
 )
 
 const (
-	errNotCp4waiops      = "managed resource is not a Cp4waiops custom resource"
-	errTrackPCUsage      = "cannot track ProviderConfig usage"
-	errGetPC             = "cannot get ProviderConfig"
-	errGetCreds          = "cannot get credentials"
-	errObserveCp4waiops  = "observe cp4waiops error"
+	errNotCp4waiops = "managed resource is not a Cp4waiops custom resource"
+	errTrackPCUsage = "cannot track ProviderConfig usage"
+	errGetPC        = "cannot get ProviderConfig"
+	errGetCreds     = "cannot get credentials"
+
 	errCreateCp4waiops   = "create cp4waiops error"
 	errUnmarshalTemplate = "cannot unmarshal template"
-
-	errNewClient = "cannot create new Service"
 
 	DGlobalImagePullSecret  = "GlobalImagePullSecret"
 	DNamespace              = "Namespace"
@@ -126,8 +124,6 @@ type Registry struct {
 type NoOpService struct{}
 
 var (
-	newNoOpService = func(_ []byte) (interface{}, error) { return &NoOpService{}, nil }
-
 	registries = map[string][]string{
 		"cp.icr.io/cp":        {"cp.stg.icr.io/cp"},
 		"docker.io/ibmcom":    {"cp.stg.icr.io/cp"},
@@ -211,11 +207,14 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 		return nil, errors.Wrap(err, errGetCreds)
 	}
 
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return nil, errors.New("The secret is not ready yet")
 	}
 
 	clientConfig, err := clientcmd.RESTConfigFromKubeConfig(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot convert kubeconfig as client config")
+	}
 
 	kubeClient, err := kubernetes.NewForConfig(clientConfig)
 	if err != nil {
@@ -417,35 +416,38 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	e.logger.Info("Creating: " + cr.ObjectMeta.Name)
 	e.logger.Info("current stage : " + component)
 	//Only handle unavailable resources/services/deployment
+	var err error
 	switch {
 	case component == DOCS:
-		e.createOCS(ctx)
+		err = e.createOCS(ctx)
 	case component == DNamespace:
-		e.createNamespace(ctx)
+		err = e.createNamespace(ctx)
 	case component == DGlobalImagePullSecret:
-		e.patchGlobalImagePullSecret(ctx)
+		err = e.patchGlobalImagePullSecret(ctx)
 	case component == DImageContentPolicy:
-		e.createImageContentPolicy(ctx)
+		err = e.createImageContentPolicy(ctx)
 	case component == DImagePullSecret:
-		e.createImagePullSecret(ctx)
+		err = e.createImagePullSecret(ctx)
 	case component == DStrimzOperator:
-		e.createStrimzOperator(ctx)
+		err = e.createStrimzOperator(ctx)
 	case component == DServerlessOperator:
-		e.createServerlessOperator(ctx)
+		err = e.createServerlessOperator(ctx)
 	case component == DServerlessNamespace:
-		e.createServerlessNamespace(ctx)
+		err = e.createServerlessNamespace(ctx)
 	case component == DKnativeServingInstance:
-		e.createKnativeServingInstance(ctx)
+		err = e.createKnativeServingInstance(ctx)
 	case component == DKnativeEveningInstance:
-		e.createKnativeEventingInstance(ctx)
+		err = e.createKnativeEventingInstance(ctx)
 	case component == CatalogSource:
-		e.createCatalogSources(ctx, cr)
+		err = e.createCatalogSources(ctx, cr)
 	case component == AIOpsSubscription:
-		e.createAIOpsSubscription(ctx, cr)
+		err = e.createAIOpsSubscription(ctx, cr)
 	case component == DWAIOPS:
-		e.createCP4WAIOPS(ctx, cr)
+		err = e.createCP4WAIOPS(ctx, cr)
 	}
-
+	if err != nil {
+		return managed.ExternalCreation{}, errors.Wrap(err, errCreateCp4waiops)
+	}
 	return managed.ExternalCreation{
 		// Optionally return any details that may be required to connect to the
 		// external resource. These will be stored as the connection secret.
@@ -479,8 +481,6 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
 	return nil
 }
 
-func int32Ptr(i int32) *int32 { return &i }
-
 func (e *external) observeNamespace(ctx context.Context, cr *v1alpha1.Cp4waiops) error {
 	component = DNamespace
 	aiopsNamespace = cr.Spec.ForProvider.InstallParams.Namespace
@@ -511,6 +511,7 @@ func (e *external) createNamespace(ctx context.Context) error {
 	return nil
 }
 
+/*
 func (e *external) observeImageContentPolicy(ctx context.Context) error {
 
 	e.logger.Info("Observe ImageContentPolicy existing for aiops ")
@@ -528,6 +529,7 @@ func (e *external) observeImageContentPolicy(ctx context.Context) error {
 	component = DImagePullSecret
 	return nil
 }
+*/
 
 func (e *external) createImageContentPolicy(ctx context.Context) error {
 
@@ -566,6 +568,7 @@ func (e *external) createImageContentPolicy(ctx context.Context) error {
 	return nil
 }
 
+/*
 func (e *external) observeGlobalImagePullSecret(ctx context.Context) error {
 	component = DGlobalImagePullSecret
 	e.logger.Info("Observe Global image secret existing for aiops ")
@@ -582,12 +585,12 @@ func (e *external) observeGlobalImagePullSecret(ctx context.Context) error {
 	if err != nil {
 		e.logger.Info("unmarshal content error , content :" + string(content))
 	}
-	/*
+
 		artifactories := auths.Auths
 		for url, _ := range artifactories {
 			e.logger.Info("artifactory is :" + url)
 		}
-	*/
+
 
 	if _, ok := auths.Auths["cp.icr.io"]; !ok {
 		return errors.New("Pull image doesn't meet requirement , lack of artifactory cp.icr.io")
@@ -607,6 +610,7 @@ func (e *external) observeGlobalImagePullSecret(ctx context.Context) error {
 
 	return nil
 }
+*/
 
 func (e *external) patchGlobalImagePullSecret(ctx context.Context) error {
 	e.logger.Info("Patching ImagePullSecret for aiops ")
@@ -706,8 +710,13 @@ func (e *external) observeImagePullSecret(ctx context.Context, cr *v1alpha1.Cp4w
 
 	//need patch the default serviceaccount in openshift-marketplace namespace
 	sa, err := e.kube.CoreV1().ServiceAccounts(OCPMarketplaceNS).Get(ctx, "default", metav1.GetOptions{})
-	if !contains(sa.ImagePullSecrets, DImagePullSecretName) {
-		return errors.New("Error , no imagepullsecret patched to serviceaccount default , namespace " + OCPMarketplaceNS)
+	if err != nil {
+		e.logger.Info("The serviceaccount default in namespace " + OCPMarketplaceNS + " has not been created yet")
+		return nil
+	} else {
+		if !contains(sa.ImagePullSecrets, DImagePullSecretName) {
+			return errors.New("Error , no imagepullsecret patched to serviceaccount default , namespace " + OCPMarketplaceNS)
+		}
 	}
 
 	//need patch the strimzi-cluster-operator serviceaccount in openshift-operator namespace
@@ -1075,7 +1084,7 @@ func (e *external) observeKnativeServingInstance(ctx context.Context) error {
 		e.logger.Info("Not able to list KnativeServingInstance , Namespace: " + KNATIVE_SERVING_NAMESPACE + ", KnativeServerInstance :" + KNATIVE_SERVING_INSTANCE_NAME)
 		return err
 	}
-	if !(knservingInstance.Status.IsReady() == true) {
+	if !knservingInstance.Status.IsReady() {
 		//Return reconcile waiting for  knservingInstance ready
 		e.logger.Info("KnativeServingInstance is not ready yet , Namespace: " + KNATIVE_SERVING_NAMESPACE + ", KnativeServerInstance :" + KNATIVE_SERVING_INSTANCE_NAME)
 		return nil
@@ -1140,7 +1149,7 @@ func (e *external) observeKnativeEventingInstance(ctx context.Context) error {
 		e.logger.Info("Not able to list KnativeEventingInstance , Namespace: " + KNATIVE_EVENTING_NAMESPACE + ", KnativeEventingInstance :" + KNATIVE_EVENTING_INSTANCE_NAME)
 		return err
 	}
-	if !(kneventingInstance.Status.IsReady() == true) {
+	if !kneventingInstance.Status.IsReady() {
 		//Return reconcile waiting for  knservingInstance ready
 		e.logger.Info("KnativeEventingInstance is not ready yet , Namespace: " + KNATIVE_EVENTING_NAMESPACE + ", KnativeEventingInstance :" + KNATIVE_EVENTING_INSTANCE_NAME)
 		return nil
@@ -1347,7 +1356,7 @@ func (e *external) createAIOpsSubscription(ctx context.Context, cr *v1alpha1.Cp4
 		return err
 	}
 
-	e.logger.Info("AIOPS subscription are created ")
+	e.logger.Info("AIOPS subscription " + subscription.Name + " are created ")
 	return nil
 }
 
@@ -1360,6 +1369,7 @@ func (e *external) addSecret(auths *Auths, artifact string, auth []byte, email s
 	auths.Auths[artifact] = r
 }
 
+/*
 func (e *external) observeOCS(ctx context.Context) error {
 	component = DOCS
 	e.logger.Info("Observe openshift storage existing for aiops ")
@@ -1377,17 +1387,39 @@ func (e *external) observeOCS(ctx context.Context) error {
 	}
 	return nil
 }
+*/
 
 func (e *external) createOCS(ctx context.Context) error {
 	e.logger.Info("Creating all AIOPS subscription ")
 
-	e.createOCSNS(ctx)
-	e.createOCSGroup(ctx)
-	e.createOCSSubcription(ctx)
-	e.labelWorkers(ctx)
-	e.createOCSLocalSubcription(ctx)
-	e.createLocalStorage(ctx)
-	e.createStorageCluster(ctx)
+	err := e.createOCSNS(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.createOCSGroup(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.createOCSSubcription(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.labelWorkers(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.createOCSLocalSubcription(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.createLocalStorage(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.createStorageCluster(ctx)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1529,7 +1561,7 @@ func (e *external) createOCSSubcription(ctx context.Context) error {
 		return err
 	}
 
-	e.logger.Info("OCS subscription are created ")
+	e.logger.Info("OCS subscription " + subscription.Name + " are created ")
 
 	return nil
 }
@@ -1590,7 +1622,7 @@ func (e *external) createOCSLocalSubcription(ctx context.Context) error {
 		return err
 	}
 
-	e.logger.Info("OCS local storage operator subscription are created ")
+	e.logger.Info("OCS local storage operator subscription " + subscription.Name + " are created ")
 
 	return nil
 }
@@ -1888,9 +1920,18 @@ func (e *external) validateCP4WAIOPS(ctx context.Context) error {
 	e.logger.Info("Velidate CP4WAIOPS installation")
 
 	e.logger.Info("Checking if pods pullimage error")
-	e.fixPodImagePullError(ctx, OCPOperatorNS)
-	e.fixPodImagePullError(ctx, "ibm-common-services")
-	e.fixPodImagePullError(ctx, aiopsNamespace)
+	err := e.fixPodImagePullError(ctx, OCPOperatorNS)
+	if err != nil {
+		return err
+	}
+	err = e.fixPodImagePullError(ctx, "ibm-common-services")
+	if err != nil {
+		return err
+	}
+	err = e.fixPodImagePullError(ctx, aiopsNamespace)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
